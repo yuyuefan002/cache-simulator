@@ -2,6 +2,7 @@
 #define __CACHE_H__
 
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 #define I_MEM_ONLY -2
@@ -19,14 +20,21 @@ class Cache
   int DRAMAccessTime;
   int setSize;
   int totalHit;
+  int totalHit_sb;
   int totalAccess;
+  int conflict_in;
+  int conflict_rd;
+  int compulsory_in;
+  int compulsory_rd;
   int totalInsnHit;
+  int totalInsnHit_sb;
   int totalInsnAccess;
   int totalWrHit;
   int totalWrAccess;
   int mode;
   int replaceAlg;
   bool allocOnWrMiss;
+  std::unordered_set<std::string> seenBefore;
   std::vector<std::vector<std::pair<int, std::string> > > cache;
   std::vector<std::vector<int> > lru;
   std::vector<std::pair<std::pair<int, std::string>, std::string> > storeBuf;
