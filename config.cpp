@@ -37,6 +37,12 @@ void Config::loadmodel1(std::string param) {
   else if (param == "unified")
     mode_l1 = UNIFIED;
 }
+void Config::loadReplaceAlg(std::string param) {
+  if (param == "LRU")
+    replaceAlg = -5;
+  else if (param == "RND")
+    replaceAlg = -6;
+}
 void Config::loadOption(std::string option, std::string param) {
   if (option == "associativity")
     loadAssoc(param);
@@ -44,7 +50,7 @@ void Config::loadOption(std::string option, std::string param) {
     loadBlkSz(param);
   else if (option == "capacity")
     loadCap(param);
-  else if (option == "hitTIme")
+  else if (option == "hitTime")
     loadHitTIme(param);
   else if (option == "DRAMAccessTime")
     loadDRAMAccessTime(param);
@@ -52,6 +58,8 @@ void Config::loadOption(std::string option, std::string param) {
     loadmodel1(param);
   else if (option == "allocOnWrMiss")
     loadAllocOnWrMiss(param);
+  else if (option == "replaceAlg")
+    loadReplaceAlg(param);
 }
 std::string Config::getOption(std::string conf) {
   size_t pos = conf.find(":");
@@ -93,4 +101,7 @@ int Config::getmodel1() {
 }
 bool Config::getAllocOnWrMiss() {
   return allocOnWrMiss;
+}
+int Config::getReplaceAlg() {
+  return replaceAlg;
 }

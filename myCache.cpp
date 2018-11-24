@@ -19,10 +19,26 @@ int main(int argc, char ** argv) {
   int DRAMAccessTime;
   int mode[2] = {0};
   bool allocOnWrMiss;
-  sysInit(associativity, blockSize, capacity, hitTime, DRAMAccessTime, mode, allocOnWrMiss);
+  int replaceAlg;
+  sysInit(
+      associativity, blockSize, capacity, hitTime, DRAMAccessTime, mode, allocOnWrMiss, replaceAlg);
   Parser parser(associativity, blockSize, capacity);
-  Cache cache1(hitTime, DRAMAccessTime, associativity, blockSize, capacity, mode[0], allocOnWrMiss);
-  Cache cache2(hitTime, DRAMAccessTime, associativity, blockSize, capacity, mode[1], allocOnWrMiss);
+  Cache cache1(hitTime,
+               DRAMAccessTime,
+               associativity,
+               blockSize,
+               capacity,
+               mode[0],
+               allocOnWrMiss,
+               replaceAlg);
+  Cache cache2(hitTime,
+               DRAMAccessTime,
+               associativity,
+               blockSize,
+               capacity,
+               mode[1],
+               allocOnWrMiss,
+               replaceAlg);
   std::ifstream ifs;
   ifs.open(argv[1], std::ifstream::in);
   std::string command;

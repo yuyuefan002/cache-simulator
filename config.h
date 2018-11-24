@@ -14,6 +14,7 @@ class Config
   int DRAMAccessTime;
   int mode_l1;
   bool allocOnWrMiss;
+  int replaceAlg;
   void loadAssoc(std::string param);
   void loadBlkSz(std::string param);
   void loadCap(std::string param);
@@ -22,6 +23,7 @@ class Config
   void loadDRAMAccessTime(std::string param);
   void loadmodel1(std::string param);
   void loadAllocOnWrMiss(std::string param);
+  void loadReplaceAlg(std::string param);
   std::string getOption(std::string conf);
   std::string getParam(std::string conf);
 
@@ -34,5 +36,6 @@ class Config
   int getDRAMAccessTime();
   int getmodel1();
   bool getAllocOnWrMiss();
+  int getReplaceAlg();
 };
 #endif

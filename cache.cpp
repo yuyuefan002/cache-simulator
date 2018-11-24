@@ -1,6 +1,13 @@
 #include "cache.h"
 
-Cache::Cache(int h, int d, int associativity, int blockSize, int capacity, int m, bool alloc) :
+Cache::Cache(int h,
+             int d,
+             int associativity,
+             int blockSize,
+             int capacity,
+             int m,
+             bool alloc,
+             int ra) :
     A(associativity),
     hitTime(h),
     DRAMAccessTime(d),
@@ -11,11 +18,16 @@ Cache::Cache(int h, int d, int associativity, int blockSize, int capacity, int m
     totalWrHit(0),
     totalWrAccess(0),
     mode(m),
+    replaceAlg(ra),
     allocOnWrMiss(alloc) {
   setSize = capacity / (blockSize * associativity);
   cache.resize(setSize);
+  lru.resize(setSize);
   for (size_t i = 0; i < cache.size(); i++) {
     cache[i].resize(associativity);
+    for (int j = 0; j < associativity; j++) {
+      lru[i].push_back(j);
+    }
   }
 }
 bool Cache::hitinStoreBuf(std::string address) {
@@ -41,16 +53,28 @@ void Cache::sb2Cache() {
 bool Cache::hitInCache(std::string tag, int setid) {
   for (size_t i = 0; i < cache[setid].size(); i++) {
     if (cache[setid][i].first == 1 && cache[setid][i].second == tag) {
+      // recently used way, so have to put the end of LRU
+      updLru(setid, i);
       return true;
     }
   }
   return false;
 }
-size_t Cache::put_in_which_way() {
+void Cache::updLru(int setid, int pos) {
+  int temp = lru[setid][pos];
+  lru[setid].erase(lru[setid].begin() + pos);
+  lru[setid].push_back(temp);
+}
+size_t Cache::put_in_which_way(int setid) {
+  if (replaceAlg == LRU) {
+    int res = lru[setid][0];
+    updLru(setid, 0);
+    return res;
+  }
   return rand() % A;
 }
 void Cache::updCache(std::string tag, int setid) {
-  size_t pos = put_in_which_way();
+  size_t pos = put_in_which_way(setid);
   cache[setid][pos].first = 1;
   cache[setid][pos].second = tag;
 }
@@ -93,11 +117,17 @@ void Cache::put(std::string tag, int setid, std::string address) {
 void Cache::getHitRate() {
   if (mode == UNI_MEM || mode == D_MEM_ONLY) {
     fprintf(stdout, "Read Hit Rate is %.2f%%\n", (1.0 * totalHit / totalAccess) * 100);
-
+    fprintf(stdout,
+            "Average Read Hit Time is %.2f cycle\n",
+            hitTime + (1.0 * totalHit / totalAccess) * DRAMAccessTime);
     fprintf(stdout, "Write Hit Rate is %.2f%%\n", (1.0 * totalWrHit / totalWrAccess) * 100);
   }
-  if (mode == UNI_MEM || mode == I_MEM_ONLY)
+  if (mode == UNI_MEM || mode == I_MEM_ONLY) {
     fprintf(stdout, "Fetch Hit Rate is %.2f%%\n", (1.0 * totalInsnHit / totalInsnAccess) * 100);
+    fprintf(stdout,
+            "Average Fetch Hit Time is %.2f cycle\n",
+            hitTime + 1.0 * totalInsnHit / totalInsnAccess * DRAMAccessTime);
+  }
 }
 
 void Cache::operation(std::string cmdType, std::string tag, int setid, std::string address) {

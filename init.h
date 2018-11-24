@@ -9,6 +9,7 @@ void sysInit(int & associativity,
              int & hitTime,
              int & DRAMAccessTime,
              int * mode,
-             bool & allocOnWrMiss);
+             bool & allocOnWrMiss,
+             int & replaceAlg);
 
 #endif

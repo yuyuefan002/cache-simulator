@@ -8,6 +8,8 @@
 #define D_MEM_ONLY -3
 #define UNI_MEM -4
 #define None 0
+#define LRU -5
+#define RND -6
 #include "parser.h"
 class Cache
 {
@@ -23,8 +25,10 @@ class Cache
   int totalWrHit;
   int totalWrAccess;
   int mode;
+  int replaceAlg;
   bool allocOnWrMiss;
   std::vector<std::vector<std::pair<int, std::string> > > cache;
+  std::vector<std::vector<int> > lru;
   std::vector<std::pair<std::pair<int, std::string>, std::string> > storeBuf;
   bool hitinStoreBuf(std::string address);
   void sb2Cache();
@@ -33,10 +37,11 @@ class Cache
   void getInsn(std::string tag, int setid, std::string address);
   bool hitInCache(std::string tag, int setid);
   void updCache(std::string tag, int setid);
-  size_t put_in_which_way();
+  size_t put_in_which_way(int setid);
+  void updLru(int setid, int pot);
 
  public:
-  Cache(int h, int d, int a, int b, int c, int m, bool alloc);
+  Cache(int h, int d, int a, int b, int c, int m, bool alloc, int ra);
 
   void getHitRate();
   void operation(std::string cmdType, std::string tag, int setid, std::string address);
