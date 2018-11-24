@@ -73,35 +73,42 @@ void Cache::updCache(std::string tag, int setid) {
   size_t pos = put_in_which_way(setid);
   cache[setid][pos].first = 1;
   cache[setid][pos].second = tag;
+  //if block is dirty write back to cache_l2
+  if (l2exist) {
+    //cache_l2.writeback();
+  }
 }
 
 // read data from cache
 void Cache::get(std::string tag, int setid, std::string address) {
   // check whether in the store buffer
-  if (hitinStoreBuf(address)) {
-    totalHit_sb++;
-  }
-  else if (hitInCache(tag, setid) == true) {
+  std::string temp = tag + std::to_string(setid);
+  if (hitInCache(tag, setid) == true) {
     totalHit++;
   }
   else {
     // if miss in the cache
+    if (l2exist) {
+      //read from l2 cache
+      //cache_l2.get(tag, setid, address);
+    }
     updCache(tag, setid);
     // transfer data from store buffer to cache
     sb2Cache();
-    if (seenBefore.count(address)) {
+    if (seenBefore2.count(temp)) {
       conflict_rd++;
     }
     else {
       compulsory_rd++;
     }
   }
-  seenBefore.insert(address);
+  seenBefore2.insert(temp);
   totalAccess++;
 }
 
 //read instuction from cache
 void Cache::getInsn(std::string tag, int setid, std::string address) {
+  std::string temp = tag + std::to_string(setid);
   // check whether in the store buffer
   if (hitinStoreBuf(address)) {
     totalInsnHit_sb++;
@@ -111,10 +118,15 @@ void Cache::getInsn(std::string tag, int setid, std::string address) {
   }
   else {
     // if miss in the cache
+    if (l2exist) {
+      //read from l2 cache
+      //if hit in l2 cache
+      //cache_l2.get(tag, setid, address);
+    }
     updCache(tag, setid);
     // pass data from store buffer to cache
     sb2Cache();
-    if (seenBefore.count(address)) {
+    if (seenBefore2.count(temp)) {
       conflict_in++;
     }
     else {
@@ -122,21 +134,31 @@ void Cache::getInsn(std::string tag, int setid, std::string address) {
     }
   }
   // for calculating compulsory miss
-  seenBefore.insert(address);
+  seenBefore2.insert(temp);
   totalInsnAccess++;
 }
 
 // write data into cache
 void Cache::put(std::string tag, int setid, std::string address) {
+  std::string temp = tag + std::to_string(setid);
   if (hitInCache(tag, setid)) {
     totalWrHit++;
   }
   else {  //put into store buffer.
     storeBuf.push_back({{setid, tag}, address});
+
+    if (seenBefore2.count(temp)) {
+      conflict_wr++;
+    }
+    else {
+      compulsory_wr++;
+    }
     if (allocOnWrMiss == true) {
       updCache(tag, setid);
+      seenBefore2.insert(temp);
     }
   }
+
   totalWrAccess++;
 }
 void Cache::operation(std::string cmdType, std::string tag, int setid, std::string address) {
@@ -148,43 +170,25 @@ void Cache::operation(std::string cmdType, std::string tag, int setid, std::stri
     getInsn(tag, setid, address);
 }
 
-void Cache::getHitRate() {
+std::vector<int> Cache::getHitRate() {
+  std::vector<int> res(15, 0);
   if (mode == UNI_MEM || mode == D_MEM_ONLY) {
-    fprintf(
-        stdout, "Read Hit Rate is %.2f%%\n", (1.0 * (totalHit + totalHit_sb) / totalAccess) * 100);
-    fprintf(stdout,
-            "Average Read Hit Time is %.2f cycle\n",
-            hitTime + (1 - 1.0 * (totalHit + totalHit_sb) / totalAccess) * DRAMAccessTime);
-
-    fprintf(stdout, "total read miss is: %d\n", totalAccess - totalHit - totalHit_sb);
-    fprintf(stdout,
-            "Read compulsory miss is: %d, rate is: %.2f%%\n",
-            compulsory_rd,
-            1.0 * compulsory_rd / (totalAccess - totalHit - totalHit_sb) * 100);
-    fprintf(stdout,
-            "Read capacity+conflict miss is: %d, rate is: %.2f%%\n\n",
-            conflict_rd,
-            1.0 * conflict_rd / (totalAccess - totalHit - totalHit_sb) * 100);
-    fprintf(stdout, "Write Hit Rate is %.2f%%\n\n", (1.0 * totalWrHit / totalWrAccess) * 100);
+    res[2] = totalWrAccess;
+    res[1] = totalAccess;
+    res[3] = totalAccess - totalHit - totalHit_sb;
+    res[4] = totalWrAccess - totalWrHit;
+    res[6] = compulsory_rd;
+    res[8] = compulsory_wr;
+    res[9] = conflict_rd;
+    res[10] = conflict_wr;
   }
   if (mode == UNI_MEM || mode == I_MEM_ONLY) {
-    fprintf(stdout,
-            "Fetch Hit Rate is %.2f%%\n",
-            (1.0 * (totalInsnHit + totalInsnHit_sb) / totalInsnAccess) * 100);
-    fprintf(
-        stdout,
-        "Average Fetch Hit Time is %.2f cycle\n",
-        hitTime + (1 - 1.0 * (totalInsnHit + totalInsnHit_sb) / totalInsnAccess) * DRAMAccessTime);
-    fprintf(stdout, "total fetch miss is: %d\n", totalInsnAccess - totalInsnHit - totalInsnHit_sb);
-    fprintf(stdout,
-            "Fetch compulsory miss is: %d, rate is: %.2f%%\n",
-            compulsory_in,
-            1.0 * compulsory_in / (totalInsnAccess - totalInsnHit - totalInsnHit_sb) * 100);
-    fprintf(stdout,
-            "Fetch capacity+conflict miss is: %d, rate is: %.2f%%\n",
-            conflict_in,
-            1.0 * conflict_in / (totalInsnAccess - totalInsnHit - totalInsnHit_sb) * 100);
+    res[0] = totalInsnAccess;
+    res[5] = totalInsnAccess - totalInsnHit - totalInsnHit_sb;
+    res[7] = compulsory_in;
+    res[11] = conflict_in;
   }
+  return res;
 }
 
 Cache::Cache(int h,
@@ -194,16 +198,18 @@ Cache::Cache(int h,
              int capacity,
              int m,
              bool alloc,
-             int ra) :
+             int ra,
+             bool l2) :
     A(associativity),
     hitTime(h),
     DRAMAccessTime(d),
     totalHit(0),
     totalHit_sb(0),
     totalAccess(0),
-
+    conflict_wr(0),
     conflict_in(0),
     conflict_rd(0),
+    compulsory_wr(0),
     compulsory_in(0),
     compulsory_rd(0),
     totalInsnHit(0),
@@ -213,7 +219,8 @@ Cache::Cache(int h,
     totalWrAccess(0),
     mode(m),
     replaceAlg(ra),
-    allocOnWrMiss(alloc) {
+    allocOnWrMiss(alloc),
+    l2exist(l2) {
   setSize = capacity / (blockSize * associativity);
   cache.resize(setSize);
   lru.resize(setSize);
@@ -222,5 +229,11 @@ Cache::Cache(int h,
     for (int j = 0; j < associativity; j++) {
       lru[i].push_back(j);
     }
+  }
+  if (l2exist) {
+    cache_l2.resize(pow(2, 10));
+  }
+  for (size_t i = 0; i < cache_l2.size(); i++) {
+    cache_l2[i].resize(4);
   }
 }

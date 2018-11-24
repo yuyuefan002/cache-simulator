@@ -22,8 +22,10 @@ class Cache
   int totalHit;
   int totalHit_sb;
   int totalAccess;
+  int conflict_wr;
   int conflict_in;
   int conflict_rd;
+  int compulsory_wr;
   int compulsory_in;
   int compulsory_rd;
   int totalInsnHit;
@@ -34,10 +36,12 @@ class Cache
   int mode;
   int replaceAlg;
   bool allocOnWrMiss;
-  std::unordered_set<std::string> seenBefore;
+  bool l2exist;
+  std::unordered_set<std::string> seenBefore2;
   std::vector<std::vector<std::pair<int, std::string> > > cache;
   std::vector<std::vector<int> > lru;
   std::vector<std::pair<std::pair<int, std::string>, std::string> > storeBuf;
+  std::vector<std::vector<std::pair<int, std::string> > > cache_l2;
   bool hitinStoreBuf(std::string address);
   void sb2Cache();
   void get(std::string tag, int setid, std::string address);
@@ -49,9 +53,9 @@ class Cache
   void updLru(int setid, int pot);
 
  public:
-  Cache(int h, int d, int a, int b, int c, int m, bool alloc, int ra);
+  Cache(int h, int d, int a, int b, int c, int m, bool alloc, int ra, bool l2);
 
-  void getHitRate();
+  std::vector<int> getHitRate();
   void operation(std::string cmdType, std::string tag, int setid, std::string address);
 };
 #endif

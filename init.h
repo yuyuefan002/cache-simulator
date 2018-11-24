@@ -12,4 +12,5 @@ void sysInit(int & associativity,
              bool & allocOnWrMiss,
              int & replaceAlg);
 
+void printResult(std::vector<int> res1, std::vector<int> res2);
 #endif
