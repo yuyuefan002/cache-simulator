@@ -52,5 +52,6 @@ int main(int argc, char ** argv) {
   cache1.getHitRate();
   cache2.getHitRate();
   ifs.close();
+  fprintf(stdout, "+-----------------------------------------------+\n");
   return EXIT_SUCCESS;
 }
