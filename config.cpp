@@ -1,3 +1,4 @@
+
 #include "config.h"
 
 int str2int(std::string param) {
@@ -70,7 +71,12 @@ std::string Config::getParam(std::string conf) {
   return conf.substr(pos + 1);
 }
 
-Config::Config(std::string filename) : associativity(0), blockSize(0), capacity(0) {
+Config::Config(std::string filename) :
+    associativity(0),
+    blockSize(0),
+    capacity(0),
+    hitTime(0),
+    DRAMAccessTime(0) {
   std::ifstream ifs;
   ifs.open(filename, std::ifstream::in);
   std::string conf;
