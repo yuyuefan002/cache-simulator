@@ -15,6 +15,9 @@ int main(int argc, char ** argv) {
     fprintf(stderr, "Usage:%s filename\n", argv[0]);
     return EXIT_FAILURE;
   }
+  fprintf(
+      stdout,
+      "simulating on DUKE server.Ubuntu 18.04.1 LTS Intel(R) Xeon(R) CPU E5-2690 v3 @ 2.60GHz\n");
   int associativity;
   int blockSize;
   int capacity;
