@@ -1,20 +1,20 @@
 #include "init.h"
-
-void sysInit(int & associativity,
-             int & blockSize,
-             int & capacity,
-             int & hitTime,
-             int & DRAMAccessTime,
-             int * mode,
-             bool & allocOnWrMiss,
-             int & replaceAlg,
-             int & A_l2,
-             int & B_l2,
-             int & C_l2,
-             int & h2,
-             int * mode2,
-             bool & all2,
-             int & rA2) {
+Sys::Sys() : h_l1(0), h_l2(0), DAT(0), l2(false) {}
+void Sys::sysInit(int & associativity,
+                  int & blockSize,
+                  int & capacity,
+                  int & hitTime,
+                  int & DRAMAccessTime,
+                  int * mode,
+                  bool & allocOnWrMiss,
+                  int & replaceAlg,
+                  int & A_l2,
+                  int & B_l2,
+                  int & C_l2,
+                  int & h2,
+                  int * mode2,
+                  bool & all2,
+                  int & rA2) {
   Config config("cache.config");
   associativity = config.getAssociativity();
   A_l2 = config.getA_l2();
@@ -22,9 +22,9 @@ void sysInit(int & associativity,
   B_l2 = config.getB_l2();
   capacity = config.getCapacity();
   C_l2 = config.getC_l2();
-  hitTime = config.getHitTime();
-  h2 = config.geth2();
-  DRAMAccessTime = config.getDRAMAccessTime();
+  h_l1 = hitTime = config.getHitTime();
+  h_l2 = h2 = config.geth2();
+  DAT = DRAMAccessTime = config.getDRAMAccessTime();
   fprintf(stdout, "+-----------------------------------------------+\n");
   fprintf(stdout, "L1 Cache info:\n\n");
   fprintf(stdout,
@@ -50,10 +50,12 @@ void sysInit(int & associativity,
   if (config.getmodel2() == SPLIT) {
     mode2[0] = D_MEM_ONLY;
     mode2[1] = I_MEM_ONLY;
+    l2 = true;
   }
   else if (config.getmodel2() == UNIFIED) {
     mode2[0] = UNI_MEM;
     mode2[1] = None;
+    l2 = true;
   }
   allocOnWrMiss = config.getAllocOnWrMiss();
   all2 = config.getall2();
@@ -88,7 +90,7 @@ void sysInit(int & associativity,
   fprintf(stdout, rA2 == LRU ? "LRU\n" : "RND\n");
   fprintf(stdout, "+-----------------------------------------------+\n");
 }
-void printResult(std::vector<int> res1, std::vector<int> res2) {
+void Sys::printResult(std::vector<int> res1, std::vector<int> res2) {
   int zero = 0;
   int instrn = res1[0] + res2[0];
   int read = res1[1] + res2[1];
@@ -172,4 +174,31 @@ void printResult(std::vector<int> res1, std::vector<int> res2) {
           cfrmiss,
           cfwmiss,
           zero);
+}
+void tavg(float a, std::string msg) {
+  fprintf(stdout, "%s tavg: %.2f cycle\n", msg.c_str(), a);
+}
+void Sys::printRunInfo(std::vector<int> res1,
+                       std::vector<int> res2,
+                       std::vector<int> res3,
+                       std::vector<int> res4) {
+  printResult(res1, res2);
+  float tavg_r_l2 = DAT;
+  float tavg_ir_l2 = DAT;
+  if (l2) {
+    tavg_r_l2 = h_l2 + 1.0 * (res3[3] + res4[3]) / (res3[1] + res4[1]) * DAT;
+    tavg_ir_l2 = h_l2 + 1.0 * (res3[5] + res4[5]) / (res3[0] + res4[0]) * DAT;
+  }
+  float tavg_r_l1 = h_l1 + 1.0 * (res1[3] + res2[3]) / (res1[1] + res2[1]) * tavg_r_l2;
+  float tavg_ir_l1 = h_l1 + 1.0 * (res1[5] + res2[5]) / (res1[0] + res2[0]) * tavg_ir_l2;
+  tavg(tavg_r_l1, "\nl1 read");
+  tavg(tavg_ir_l1, "l1 fetch");
+  if (l2) {
+    fprintf(stdout, "+-----------------------------------------------+\n");
+    printResult(res3, res4);
+
+    tavg(tavg_r_l2, "\nl2 read");
+    tavg(tavg_ir_l2, "l2 fetch");
+    fprintf(stdout, "+-----------------------------------------------+\n");
+  }
 }
