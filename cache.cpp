@@ -30,18 +30,21 @@ bool Cache::hitinStoreBuf(std::string address) {
 // pair the data in store buffer to cache
 void Cache::sb2Cache() {
   for (size_t i = 0; i < storeBuf.size(); i++) {
-    if (hitInCache(storeBuf[i].first.second, storeBuf[i].first.first)) {
+    if (hitInCache(storeBuf[i].first.second, storeBuf[i].first.first, 1)) {
       storeBuf.erase(storeBuf.begin() + i);
     }
   }
 }
 
 // whether hit in cache or not
-bool Cache::hitInCache(std::string tag, int setid) {
+bool Cache::hitInCache(std::string tag, int setid, int write = 0) {
   for (size_t i = 0; i < cache[setid].size(); i++) {
     if (cache[setid][i].first == 1 && cache[setid][i].second == tag) {
       // recently used way, so have to put the end of LRU
       updLru(setid, i);
+      if (write) {
+        dirty[setid][i] = true;
+      }
       return true;
     }
   }
@@ -69,13 +72,14 @@ size_t Cache::put_in_which_way(int setid) {
 }
 
 // update cache
-void Cache::updCache(std::string tag, int setid) {
+void Cache::updCache(std::string tag, int setid, std::string address) {
   size_t pos = put_in_which_way(setid);
   cache[setid][pos].first = 1;
   cache[setid][pos].second = tag;
   //if block is dirty write back to cache_l2
-  if (l2exist) {
-    //cache_l2.writeback();
+  if (l2exist && dirty[setid][pos] == true) {
+    dirty[setid][pos] = false;
+    l2cache->operation("1", l2parser->getTag(), l2parser->b2D(l2parser->getSetid()), address);
   }
 }
 
@@ -91,8 +95,10 @@ void Cache::get(std::string tag, int setid, std::string address) {
     if (l2exist) {
       //read from l2 cache
       //cache_l2.get(tag, setid, address);
+      l2parser->setAddress(address);
+      l2cache->operation("0", l2parser->getTag(), l2parser->b2D(l2parser->getSetid()), address);
     }
-    updCache(tag, setid);
+    updCache(tag, setid, address);
     // transfer data from store buffer to cache
     sb2Cache();
     if (seenBefore2.count(temp)) {
@@ -120,10 +126,12 @@ void Cache::getInsn(std::string tag, int setid, std::string address) {
     // if miss in the cache
     if (l2exist) {
       //read from l2 cache
+      l2parser->setAddress(address);
+      l2cache->operation("2", l2parser->getTag(), l2parser->b2D(l2parser->getSetid()), address);
       //if hit in l2 cache
       //cache_l2.get(tag, setid, address);
     }
-    updCache(tag, setid);
+    updCache(tag, setid, address);
     // pass data from store buffer to cache
     sb2Cache();
     if (seenBefore2.count(temp)) {
@@ -141,7 +149,7 @@ void Cache::getInsn(std::string tag, int setid, std::string address) {
 // write data into cache
 void Cache::put(std::string tag, int setid, std::string address) {
   std::string temp = tag + std::to_string(setid);
-  if (hitInCache(tag, setid)) {
+  if (hitInCache(tag, setid, 1)) {
     totalWrHit++;
   }
   else {  //put into store buffer.
@@ -154,7 +162,7 @@ void Cache::put(std::string tag, int setid, std::string address) {
       compulsory_wr++;
     }
     if (allocOnWrMiss == true) {
-      updCache(tag, setid);
+      updCache(tag, setid, address);
       seenBefore2.insert(temp);
     }
   }
@@ -199,7 +207,9 @@ Cache::Cache(int h,
              int m,
              bool alloc,
              int ra,
-             bool l2) :
+             bool l2,
+             Cache * l2c,
+             Parser * l2p) :
     A(associativity),
     hitTime(h),
     DRAMAccessTime(d),
@@ -220,20 +230,18 @@ Cache::Cache(int h,
     mode(m),
     replaceAlg(ra),
     allocOnWrMiss(alloc),
-    l2exist(l2) {
+    l2exist(l2),
+    l2cache(l2c),
+    l2parser(l2p) {
   setSize = capacity / (blockSize * associativity);
   cache.resize(setSize);
+  dirty.resize(setSize);
   lru.resize(setSize);
   for (size_t i = 0; i < cache.size(); i++) {
     cache[i].resize(associativity);
+    dirty[i].resize(associativity, false);
     for (int j = 0; j < associativity; j++) {
       lru[i].push_back(j);
     }
-  }
-  if (l2exist) {
-    cache_l2.resize(pow(2, 10));
-  }
-  for (size_t i = 0; i < cache_l2.size(); i++) {
-    cache_l2[i].resize(4);
   }
 }

@@ -7,15 +7,26 @@ void sysInit(int & associativity,
              int & DRAMAccessTime,
              int * mode,
              bool & allocOnWrMiss,
-             int & replaceAlg) {
+             int & replaceAlg,
+             int & A_l2,
+             int & B_l2,
+             int & C_l2,
+             int & h2,
+             int * mode2,
+             bool & all2,
+             int & rA2) {
   Config config("cache.config");
   associativity = config.getAssociativity();
+  A_l2 = config.getA_l2();
   blockSize = config.getBlockSize();
+  B_l2 = config.getB_l2();
   capacity = config.getCapacity();
+  C_l2 = config.getC_l2();
   hitTime = config.getHitTime();
+  h2 = config.geth2();
   DRAMAccessTime = config.getDRAMAccessTime();
   fprintf(stdout, "+-----------------------------------------------+\n");
-  fprintf(stdout, "Cache info:\n\n");
+  fprintf(stdout, "L1 Cache info:\n\n");
   fprintf(stdout,
           "associatiity: %d    blockSize: %d    capacity: %d\n",
           associativity,
@@ -36,14 +47,46 @@ void sysInit(int & associativity,
   else {
     fprintf(stdout, "none\n");
   }
+  if (config.getmodel2() == SPLIT) {
+    mode2[0] = D_MEM_ONLY;
+    mode2[1] = I_MEM_ONLY;
+  }
+  else if (config.getmodel2() == UNIFIED) {
+    mode2[0] = UNI_MEM;
+    mode2[1] = None;
+  }
   allocOnWrMiss = config.getAllocOnWrMiss();
+  all2 = config.getall2();
   fprintf(stdout, "alloc on write miss: ");
   fprintf(stdout, allocOnWrMiss ? "True\n" : "False\n");
   replaceAlg = config.getReplaceAlg();
+  rA2 = config.getrA2();
   fprintf(stdout, "replacement algorithm: ");
   fprintf(stdout, replaceAlg == LRU ? "LRU\n" : "RND\n");
   fprintf(stdout, "+-----------------------------------------------+\n");
-  fprintf(stdout, "operation info:\n\n");
+  if (config.getmodel2() != SPLIT && config.getmodel2() != UNIFIED) {
+    return;
+  }
+  fprintf(stdout, "+-----------------------------------------------+\n");
+  fprintf(stdout, "L2 Cache info:\n\n");
+  fprintf(stdout, "associatiity: %d    blockSize: %d    capacity: %d\n", A_l2, B_l2, C_l2);
+  fprintf(stdout, "hit Time: %d cycle   DRAMAccesstime: %d cycle   \n", h2, DRAMAccessTime);
+  fprintf(stdout, "l2 mode: ");
+  if (config.getmodel2() == SPLIT) {
+    fprintf(stdout, "split\n");
+  }
+  else if (config.getmodel2() == UNIFIED) {
+    fprintf(stdout, "unified\n");
+  }
+  else {
+    fprintf(stdout, "none\n");
+  }
+
+  fprintf(stdout, "alloc on write miss: ");
+  fprintf(stdout, all2 ? "True\n" : "False\n");
+  fprintf(stdout, "replacement algorithm: ");
+  fprintf(stdout, rA2 == LRU ? "LRU\n" : "RND\n");
+  fprintf(stdout, "+-----------------------------------------------+\n");
 }
 void printResult(std::vector<int> res1, std::vector<int> res2) {
   int zero = 0;
@@ -69,7 +112,7 @@ void printResult(std::vector<int> res1, std::vector<int> res2) {
       "------               -----       ------       -----      -----      -----       -----\n");
 
   fprintf(stdout,
-          "Demand Fetches      %7d      %5d       %5d       %5d       %5d      %5d\n",
+          "Demand Fetches     %7d        %5d       %5d      %5d      %5d       %5d\n",
           instrn + read + write,
           instrn,
           read + write,
@@ -87,7 +130,7 @@ void printResult(std::vector<int> res1, std::vector<int> res2) {
           write / total,
           zero / total);
   fprintf(stdout,
-          "Demand Misses      %7d       %5d        %5d     %5d      %5d       %5d\n",
+          "Demand Misses      %7d        %5d       %5d      %5d      %5d       %5d\n",
           rmiss + wmiss + irmiss,
           irmiss,
           rmiss + wmiss,
@@ -104,7 +147,7 @@ void printResult(std::vector<int> res1, std::vector<int> res2) {
           1.0 * wmiss / write,
           1.0 * zero);
   fprintf(stdout,
-          "  Compulsory Misses   %d         %d          %d         %d         %d         %d\n",
+          "  Compulsory Misses%7d        %5d       %5d      %5d      %5d       %5d\n",
           (cormiss + cowmiss + coirmiss),
           coirmiss,
           cormiss + cowmiss,
@@ -112,7 +155,8 @@ void printResult(std::vector<int> res1, std::vector<int> res2) {
           cowmiss,
           zero);
   fprintf(stdout,
-          "  Capacity Misses     %d          %d           %d          %d          %d          %d\n",
+          "  Capacity Misses  %7d        %5d       %5d      %5d      %5d       %5d\n",
+
           (caprmiss + capwmiss + capirmiss),
           capirmiss,
           caprmiss + capwmiss,
@@ -120,8 +164,8 @@ void printResult(std::vector<int> res1, std::vector<int> res2) {
           capwmiss,
           zero);
   fprintf(stdout,
-          "  Conflict Misses      %d           %d            %d           %d          %d         "
-          " %d\n",
+          "  Conflict Misses  %7d        %5d       %5d      %5d      %5d       %5d\n",
+
           (cfrmiss + cfwmiss + cfirmiss),
           cfirmiss,
           cfrmiss + cfwmiss,

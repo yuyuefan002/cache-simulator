@@ -28,5 +28,6 @@ class Parser
   std::string getOffset();
   std::string getSetid();
   std::string getTag();
+  void setAddress(std::string addr);
 };
 #endif

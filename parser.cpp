@@ -152,3 +152,6 @@ std::string Parser::h2B(char h) {
   }
   return bin;
 }
+void Parser::setAddress(std::string addr) {
+  address = addr;
+}
