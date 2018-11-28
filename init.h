@@ -13,21 +13,21 @@ class Sys
 
  public:
   Sys();
-  void sysInit(int & associativity,
-               int & blockSize,
-               int & capacity,
+  void sysInit(std::vector<int> & associativity,
+               std::vector<int> & blockSize,
+               std::vector<int> & capacity,
                int & hitTime,
                int & DRAMAccessTime,
                int * mode,
-               bool & allocOnWrMiss,
-               int & replaceAlg,
-               int & A_l2,
-               int & B_l2,
-               int & C_l2,
+               std::vector<bool> & allocOnWrMiss,
+               std::vector<int> & replaceAlg,
+               std::vector<int> & A_l2,
+               std::vector<int> & B_l2,
+               std::vector<int> & C_l2,
                int & h2,
                int * mode2,
-               bool & all2,
-               int & rA2);
+               std::vector<bool> & all2,
+               std::vector<int> & rA2);
   void printResult(std::vector<int> res1, std::vector<int> res2);
   void printRunInfo(std::vector<int> res1,
                     std::vector<int> res2,

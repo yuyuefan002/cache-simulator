@@ -2,12 +2,12 @@
 
 #include <fstream>
 #include <iostream>
+#include <vector>
 
 #include "cache.h"
 #include "config.h"
 #include "init.h"
 #include "parser.h"
-
 int main(int argc, char ** argv) {
   if (argc != 2) {
     fprintf(stderr, "Usage:%s filename\n", argv[0]);
@@ -17,16 +17,18 @@ int main(int argc, char ** argv) {
       stdout,
       "simulating on DUKE server.Ubuntu 18.04.1 LTS Intel(R) Xeon(R) CPU E5-2690 v3 @ 2.60GHz\n");
   Sys sys;
-  int associativity, blockSize, capacity, hitTime, DRAMAccessTime, replaceAlg;
+  int hitTime, h2, DRAMAccessTime;
+  std::vector<int> associativity, blockSize, capacity, replaceAlg;
   int mode[2] = {0};
-  bool allocOnWrMiss;
+  std::vector<bool> allocOnWrMiss;
   bool l2 = false;
   Cache * l2cforc1 = nullptr;
   Cache * l2cforc2 = nullptr;
-  Parser * l2p = nullptr;
-  int A_l2, B_l2, C_l2, h2, rA2;
+  Parser * l2p1 = nullptr;
+  Parser * l2p2 = nullptr;
+  std::vector<int> A_l2, B_l2, C_l2, rA2;
   int mode2[2] = {0};
-  bool all2;
+  std::vector<bool> all2;
   sys.sysInit(associativity,
               blockSize,
               capacity,
@@ -42,55 +44,85 @@ int main(int argc, char ** argv) {
               mode2,
               all2,
               rA2);
-  Parser parser2(A_l2, B_l2, C_l2);
-  Cache cache3(h2, DRAMAccessTime, A_l2, B_l2, C_l2, mode2[0], all2, rA2, false, nullptr, nullptr);
-  Cache cache4(h2, DRAMAccessTime, A_l2, B_l2, C_l2, mode2[1], all2, rA2, false, nullptr, nullptr);
+  Parser parser3(A_l2[0], B_l2[0], C_l2[0]);
+  Parser parser4(A_l2[1], B_l2[1], C_l2[1]);
+  Cache cache3(h2,
+               DRAMAccessTime,
+               A_l2[0],
+               B_l2[0],
+               C_l2[0],
+               mode2[0],
+               all2[0],
+               rA2[0],
+               false,
+               nullptr,
+               nullptr);
+  Cache cache4(h2,
+               DRAMAccessTime,
+               A_l2[1],
+               B_l2[1],
+               C_l2[1],
+               mode2[1],
+               all2[1],
+               rA2[1],
+               false,
+               nullptr,
+               nullptr);
   if (mode2[0] || mode2[1]) {
     l2 = true;
-    l2p = &parser2;
   }
   if (mode2[0] == D_MEM_ONLY) {
     l2cforc1 = &cache3;
+    l2p1 = &parser3;
     l2cforc2 = &cache4;
+    l2p2 = &parser4;
   }
   else if (mode2[0] == UNI_MEM) {
     l2cforc1 = l2cforc2 = &cache3;
+    l2p1 = &parser3;
+    l2p2 = &parser3;
   }
-  Parser parser(associativity, blockSize, capacity);
+  Parser parser1(associativity[0], blockSize[0], capacity[0]);
+  Parser parser2(associativity[1], blockSize[1], capacity[1]);
   Cache cache1(hitTime,
                DRAMAccessTime,
-               associativity,
-               blockSize,
-               capacity,
+               associativity[0],
+               blockSize[0],
+               capacity[0],
                mode[0],
-               allocOnWrMiss,
-               replaceAlg,
+               allocOnWrMiss[0],
+               replaceAlg[0],
                l2,
                l2cforc1,
-               l2p);
+               l2p1);
   Cache cache2(hitTime,
                DRAMAccessTime,
-               associativity,
-               blockSize,
-               capacity,
+               associativity[1],
+               blockSize[1],
+               capacity[1],
                mode[1],
-               allocOnWrMiss,
-               replaceAlg,
+               allocOnWrMiss[1],
+               replaceAlg[1],
                l2,
                l2cforc2,
-               l2p);
+               l2p2);
 
   std::ifstream ifs;
   ifs.open(argv[1], std::ifstream::in);
   std::string command;
 
   while (getline(ifs, command)) {
-    parser.readCommand(command);
-    std::string cmdType = parser.getCmdType();
-    std::string tag = parser.getTag();
-    int setid = parser.b2D(parser.getSetid());
-    std::string address = parser.getAddress();
+    parser1.readCommand(command);
+    std::string cmdType = parser1.getCmdType();
+    std::string tag = parser1.getTag();
+    int setid = parser1.b2D(parser1.getSetid());
+    std::string address = parser1.getAddress();
     cache1.operation(cmdType, tag, setid, address);
+    parser2.readCommand(command);
+    cmdType = parser2.getCmdType();
+    tag = parser2.getTag();
+    setid = parser2.b2D(parser2.getSetid());
+    address = parser2.getAddress();
     cache2.operation(cmdType, tag, setid, address);
   }
 

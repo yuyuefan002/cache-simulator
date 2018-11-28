@@ -1,20 +1,20 @@
 #include "init.h"
 Sys::Sys() : h_l1(0), h_l2(0), DAT(0), l2(false) {}
-void Sys::sysInit(int & associativity,
-                  int & blockSize,
-                  int & capacity,
+void Sys::sysInit(std::vector<int> & associativity,
+                  std::vector<int> & blockSize,
+                  std::vector<int> & capacity,
                   int & hitTime,
                   int & DRAMAccessTime,
                   int * mode,
-                  bool & allocOnWrMiss,
-                  int & replaceAlg,
-                  int & A_l2,
-                  int & B_l2,
-                  int & C_l2,
+                  std::vector<bool> & allocOnWrMiss,
+                  std::vector<int> & replaceAlg,
+                  std::vector<int> & A_l2,
+                  std::vector<int> & B_l2,
+                  std::vector<int> & C_l2,
                   int & h2,
                   int * mode2,
-                  bool & all2,
-                  int & rA2) {
+                  std::vector<bool> & all2,
+                  std::vector<int> & rA2) {
   Config config("cache.config");
   associativity = config.getAssociativity();
   A_l2 = config.getA_l2();
@@ -25,27 +25,19 @@ void Sys::sysInit(int & associativity,
   h_l1 = hitTime = config.getHitTime();
   h_l2 = h2 = config.geth2();
   DAT = DRAMAccessTime = config.getDRAMAccessTime();
-  fprintf(stdout, "+-----------------------------------------------+\n");
-  fprintf(stdout, "L1 Cache info:\n\n");
-  fprintf(stdout,
-          "associatiity: %d    blockSize: %d    capacity: %d\n",
-          associativity,
-          blockSize,
-          capacity);
-  fprintf(stdout, "hit Time: %d cycle   DRAMAccesstime: %d cycle   \n", hitTime, DRAMAccessTime);
-  fprintf(stdout, "l1 mode: ");
+
   if (config.getmodel1() == SPLIT) {
     mode[0] = D_MEM_ONLY;
     mode[1] = I_MEM_ONLY;
-    fprintf(stdout, "split\n");
+    //    fprintf(stdout, "split\n");
   }
   else if (config.getmodel1() == UNIFIED) {
     mode[0] = UNI_MEM;
     mode[1] = None;
-    fprintf(stdout, "unified\n");
+    // fprintf(stdout, "unified\n");
   }
   else {
-    fprintf(stdout, "none\n");
+    // fprintf(stdout, "none\n");
   }
   if (config.getmodel2() == SPLIT) {
     mode2[0] = D_MEM_ONLY;
@@ -57,39 +49,81 @@ void Sys::sysInit(int & associativity,
     mode2[1] = None;
     l2 = true;
   }
+
   allocOnWrMiss = config.getAllocOnWrMiss();
   all2 = config.getall2();
-  fprintf(stdout, "alloc on write miss: ");
-  fprintf(stdout, allocOnWrMiss ? "True\n" : "False\n");
+
   replaceAlg = config.getReplaceAlg();
   rA2 = config.getrA2();
-  fprintf(stdout, "replacement algorithm: ");
-  fprintf(stdout, replaceAlg == LRU ? "LRU\n" : "RND\n");
+
   fprintf(stdout, "+-----------------------------------------------+\n");
+  if (config.getmodel1() == SPLIT) {
+    fprintf(stdout, "L1 D-MEM info:\n\n");
+  }
+  else if (config.getmodel1() == UNIFIED) {
+    fprintf(stdout, "L1 Cache info:\n\n");
+  }
+  fprintf(stdout,
+          "associatiity: %d    blockSize: %d    capacity: %d\n",
+          associativity[0],
+          blockSize[0],
+          capacity[0]);
+  fprintf(stdout, "hit Time: %d cycle   DRAMAccesstime: %d cycle   \n", hitTime, DRAMAccessTime);
+  fprintf(stdout, "l1 mode: D-MEM");
+  fprintf(stdout, "alloc on write miss: ");
+  fprintf(stdout, allocOnWrMiss[0] ? "True\n" : "False\n");
+  fprintf(stdout, "replacement algorithm: ");
+  fprintf(stdout, replaceAlg[0] == LRU ? "LRU\n" : "RND\n");
+  fprintf(stdout, "+-----------------------------------------------+\n");
+  if (config.getmodel1() == SPLIT) {
+    fprintf(stdout, "L1 I-MEM info:\n\n");
+    fprintf(stdout,
+            "associatiity: %d    blockSize: %d    capacity: %d\n",
+            associativity[1],
+            blockSize[1],
+            capacity[1]);
+    fprintf(stdout, "hit Time: %d cycle   DRAMAccesstime: %d cycle   \n", hitTime, DRAMAccessTime);
+    fprintf(stdout, "l1 mode: D-MEM");
+    fprintf(stdout, "alloc on write miss: ");
+    fprintf(stdout, allocOnWrMiss[1] ? "True\n" : "False\n");
+    fprintf(stdout, "replacement algorithm: ");
+    fprintf(stdout, replaceAlg[1] == LRU ? "LRU\n" : "RND\n");
+    fprintf(stdout, "+-----------------------------------------------+\n");
+  }
+
+  // l2 mode
   if (config.getmodel2() != SPLIT && config.getmodel2() != UNIFIED) {
     return;
   }
   fprintf(stdout, "+-----------------------------------------------+\n");
-  fprintf(stdout, "L2 Cache info:\n\n");
-  fprintf(stdout, "associatiity: %d    blockSize: %d    capacity: %d\n", A_l2, B_l2, C_l2);
+  if (config.getmodel2() == UNIFIED) {
+    fprintf(stdout, "L2 Cache info:\n\n");
+  }
+  else if (config.getmodel2() == SPLIT) {
+    fprintf(stdout, "L2 D-MEM info:\n\n");
+  }
+  fprintf(stdout, "associatiity: %d    blockSize: %d    capacity: %d\n", A_l2[0], B_l2[0], C_l2[0]);
   fprintf(stdout, "hit Time: %d cycle   DRAMAccesstime: %d cycle   \n", h2, DRAMAccessTime);
-  fprintf(stdout, "l2 mode: ");
-  if (config.getmodel2() == SPLIT) {
-    fprintf(stdout, "split\n");
-  }
-  else if (config.getmodel2() == UNIFIED) {
-    fprintf(stdout, "unified\n");
-  }
-  else {
-    fprintf(stdout, "none\n");
-  }
 
   fprintf(stdout, "alloc on write miss: ");
-  fprintf(stdout, all2 ? "True\n" : "False\n");
+  fprintf(stdout, all2[0] ? "True\n" : "False\n");
   fprintf(stdout, "replacement algorithm: ");
-  fprintf(stdout, rA2 == LRU ? "LRU\n" : "RND\n");
+  fprintf(stdout, rA2[0] == LRU ? "LRU\n" : "RND\n");
   fprintf(stdout, "+-----------------------------------------------+\n");
+  if (config.getmodel2() == SPLIT) {
+    fprintf(stdout, "L2 I-MEM info:\n\n");
+    fprintf(
+        stdout, "associatiity: %d    blockSize: %d    capacity: %d\n", A_l2[1], B_l2[1], C_l2[1]);
+    fprintf(stdout, "hit Time: %d cycle   DRAMAccesstime: %d cycle   \n", h2, DRAMAccessTime);
+
+    fprintf(stdout, "alloc on write miss: ");
+    fprintf(stdout, all2[1] ? "True\n" : "False\n");
+    fprintf(stdout, "replacement algorithm: ");
+    fprintf(stdout, rA2[1] == LRU ? "LRU\n" : "RND\n");
+    fprintf(stdout, "+-----------------------------------------------+\n");
+  }
 }
+
 void Sys::printResult(std::vector<int> res1, std::vector<int> res2) {
   int zero = 0;
   int instrn = res1[0] + res2[0];
@@ -187,7 +221,11 @@ void Sys::printRunInfo(std::vector<int> res1,
   float tavg_ir_l2 = DAT;
   if (l2) {
     tavg_r_l2 = h_l2 + 1.0 * (res3[3] + res4[3]) / (res3[1] + res4[1]) * DAT;
+    //= (h_l2[0] + 1.0 * res3[3]/res3[1] * DAT) / (res3[1] + res4[1]) + h_l2[1] +
+    //    1.0 * res4[3] * DAT / (res3[1] + res4[1]);
     tavg_ir_l2 = h_l2 + 1.0 * (res3[5] + res4[5]) / (res3[0] + res4[0]) * DAT;
+    //    = (h_l2[1] + 1.0 * res3[5] / res3[0] * DAT) / (res3[0] + res4[0]) + h_l2[1] +
+    //         1.0 * res4[5] / res4[0] * DAT / (res3[0] + res4[0]);
   }
   float tavg_r_l1 = h_l1 + 1.0 * (res1[3] + res2[3]) / (res1[1] + res2[1]) * tavg_r_l2;
   float tavg_ir_l1 = h_l1 + 1.0 * (res1[5] + res2[5]) / (res1[0] + res2[0]) * tavg_ir_l2;
