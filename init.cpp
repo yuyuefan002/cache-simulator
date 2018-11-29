@@ -148,7 +148,7 @@ void Sys::printResult(std::vector<int> res1, std::vector<int> res2) {
       "------               -----       ------       -----      -----      -----       -----\n");
 
   fprintf(stdout,
-          "Demand Fetches     %7d        %5d       %5d      %5d      %5d       %5d\n",
+          "Demand Fetches     %7d      %7d     %7d    %7d    %7d     %7d\n",
           instrn + read + write,
           instrn,
           read + write,
