@@ -53,6 +53,8 @@ class Cache
   void updCache(std::string tag, int setid, std::string address);
   size_t put_in_which_way(int setid);
   void updLru(int setid, int pos);
+  void collectMiss(std::string temp, int & conflict, int & compulsory);
+  void l2operation(std::string cmdType, std::string address);
 
  public:
   Cache(int h,

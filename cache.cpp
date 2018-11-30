@@ -53,11 +53,16 @@ bool Cache::hitInCache(std::string tag, int setid, int write = 0) {
 
 //update LRU list
 void Cache::updLru(int setid, int pos) {
-  int temp = lru[setid][pos];
+  size_t temp;
+  for (size_t i = 0; i < lru[setid].size(); i++) {
+    if (lru[setid][i] == pos) {
+      temp = i;
+    }
+  }
   //move the current way
-  lru[setid].erase(lru[setid].begin() + pos);
+  lru[setid].erase(lru[setid].begin() + temp);
   //put in the back of list
-  lru[setid].push_back(temp);
+  lru[setid].push_back(pos);
 }
 
 // delete strategy in cache
@@ -65,7 +70,7 @@ size_t Cache::put_in_which_way(int setid) {
   if (replaceAlg == LRU) {
     // the first in the list is the least recently used one
     int res = lru[setid][0];
-    updLru(setid, 0);
+    updLru(setid, res);
     return res;
   }
   return rand() % A;
@@ -82,7 +87,10 @@ void Cache::updCache(std::string tag, int setid, std::string address) {
     l2cache->operation("1", l2parser->getTag(), l2parser->b2D(l2parser->getSetid()), address);
   }
 }
-
+void Cache::l2operation(std::string cmdType, std::string address) {
+  l2parser->setAddress(address);
+  l2cache->operation(cmdType, l2parser->getTag(), l2parser->b2D(l2parser->getSetid()), address);
+}
 // read data from cache
 void Cache::get(std::string tag, int setid, std::string address) {
   // check whether in the store buffer
@@ -92,15 +100,10 @@ void Cache::get(std::string tag, int setid, std::string address) {
   }
   else {
     // if miss in the cache
-    if (l2exist) {
+    if (l2exist)
       //read from l2 cache
-      //cache_l2.get(tag, setid, address);
-      l2parser->setAddress(address);
-      l2cache->operation("0", l2parser->getTag(), l2parser->b2D(l2parser->getSetid()), address);
-    }
+      l2operation("0", address);
     updCache(tag, setid, address);
-    // transfer data from store buffer to cache
-    sb2Cache();
     if (seenBefore2.count(temp)) {
       conflict_rd++;
     }
@@ -109,31 +112,23 @@ void Cache::get(std::string tag, int setid, std::string address) {
     }
   }
   seenBefore2.insert(temp);
-  totalAccess++;
 }
 
 //read instuction from cache
 void Cache::getInsn(std::string tag, int setid, std::string address) {
   std::string temp = tag + std::to_string(setid);
-  // check whether in the store buffer
-  if (hitinStoreBuf(address)) {
-    totalInsnHit_sb++;
-  }
-  else if (hitInCache(tag, setid) == true) {
+  if (hitInCache(tag, setid) == true) {
     totalInsnHit++;
   }
   else {
     // if miss in the cache
     if (l2exist) {
       //read from l2 cache
-      l2parser->setAddress(address);
-      l2cache->operation("2", l2parser->getTag(), l2parser->b2D(l2parser->getSetid()), address);
+      l2operation("2", address);
       //if hit in l2 cache
-      //cache_l2.get(tag, setid, address);
     }
     updCache(tag, setid, address);
     // pass data from store buffer to cache
-    sb2Cache();
     if (seenBefore2.count(temp)) {
       conflict_in++;
     }
@@ -143,7 +138,6 @@ void Cache::getInsn(std::string tag, int setid, std::string address) {
   }
   // for calculating compulsory miss
   seenBefore2.insert(temp);
-  totalInsnAccess++;
 }
 
 // write data into cache
@@ -153,7 +147,6 @@ void Cache::put(std::string tag, int setid, std::string address) {
     totalWrHit++;
   }
   else {  //put into store buffer.
-    storeBuf.push_back({{setid, tag}, address});
 
     if (seenBefore2.count(temp)) {
       conflict_wr++;
@@ -162,20 +155,26 @@ void Cache::put(std::string tag, int setid, std::string address) {
       compulsory_wr++;
     }
     if (allocOnWrMiss == true) {
+      //read from l2 cache
+      l2operation("0", address);
       updCache(tag, setid, address);
       seenBefore2.insert(temp);
     }
   }
-
-  totalWrAccess++;
 }
 void Cache::operation(std::string cmdType, std::string tag, int setid, std::string address) {
-  if (cmdType == "0" && (mode == UNI_MEM || mode == D_MEM_ONLY))
+  if (cmdType == "0" && (mode == UNI_MEM || mode == D_MEM_ONLY)) {
     get(tag, setid, address);
-  else if (cmdType == "1" && (mode == UNI_MEM || mode == D_MEM_ONLY))
+    totalAccess++;
+  }
+  else if (cmdType == "1" && (mode == UNI_MEM || mode == D_MEM_ONLY)) {
     put(tag, setid, address);
-  else if (cmdType == "2" && (mode == UNI_MEM || mode == I_MEM_ONLY))
+    totalWrAccess++;
+  }
+  else if (cmdType == "2" && (mode == UNI_MEM || mode == I_MEM_ONLY)) {
     getInsn(tag, setid, address);
+    totalInsnAccess++;
+  }
 }
 
 std::vector<int> Cache::getHitRate() {

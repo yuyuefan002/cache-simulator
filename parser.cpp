@@ -25,7 +25,10 @@ int Parser::b2D(std::string b) {
 }
 
 // init
-Parser::Parser(int associativity, int blockSize, int capacity) : addrLen(6) {
+Parser::Parser(int associativity, int blockSize, int capacity) :
+    cmdType(""),
+    address(""),
+    addrLen(6) {
   pos_offset = addrLen * 4 - log2(blockSize);
   pos_setid = addrLen * 4 - log2(blockSize) - log2(capacity / (associativity * blockSize));
 }
