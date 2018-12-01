@@ -125,7 +125,8 @@ int main(int argc, char ** argv) {
     address = parser2.getAddress();
     cache2.operation(cmdType, tag, setid, address);
   }
-
+  cache1.endOperation();
+  cache2.endOperation();
   sys.printRunInfo(
       cache1.getHitRate(), cache2.getHitRate(), cache3.getHitRate(), cache4.getHitRate());
 

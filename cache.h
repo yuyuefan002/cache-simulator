@@ -11,6 +11,8 @@
 #define None 0
 #define LRU -5
 #define RND -6
+#include <iostream>
+
 #include "parser.h"
 class Cache
 {
@@ -43,9 +45,6 @@ class Cache
   std::vector<std::vector<std::pair<int, std::string> > > cache;
   std::vector<std::vector<bool> > dirty;
   std::vector<std::vector<int> > lru;
-  std::vector<std::pair<std::pair<int, std::string>, std::string> > storeBuf;
-  bool hitinStoreBuf(std::string address);
-  void sb2Cache();
   void get(std::string tag, int setid, std::string address);
   void put(std::string tag, int setid, std::string address);
   void getInsn(std::string tag, int setid, std::string address);
@@ -68,7 +67,7 @@ class Cache
         bool l2,
         Cache * l2c,
         Parser * l2p);
-
+  void endOperation();
   std::vector<int> getHitRate();
   void operation(std::string cmdType, std::string tag, int setid, std::string address);
 };

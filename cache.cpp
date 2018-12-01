@@ -16,26 +16,6 @@ Date:11/24/2018
 
 #include "cache.h"
 
-// whether hit in store buffer or not
-bool Cache::hitinStoreBuf(std::string address) {
-  for (auto pair : storeBuf) {
-    // if hit
-    if (pair.second == address) {
-      return true;
-    }
-  }
-  return false;
-}
-
-// pair the data in store buffer to cache
-void Cache::sb2Cache() {
-  for (size_t i = 0; i < storeBuf.size(); i++) {
-    if (hitInCache(storeBuf[i].first.second, storeBuf[i].first.first, 1)) {
-      storeBuf.erase(storeBuf.begin() + i);
-    }
-  }
-}
-
 // whether hit in cache or not
 bool Cache::hitInCache(std::string tag, int setid, int write = 0) {
   for (size_t i = 0; i < cache[setid].size(); i++) {
@@ -83,9 +63,9 @@ void Cache::updCache(std::string tag, int setid, std::string address) {
   cache[setid][pos].second = tag;
   //if block is dirty write back to cache_l2
   if (l2exist && dirty[setid][pos] == true) {
-    dirty[setid][pos] = false;
-    l2cache->operation("1", l2parser->getTag(), l2parser->b2D(l2parser->getSetid()), address);
+    l2operation("1", address);
   }
+  dirty[setid][pos] = false;
 }
 void Cache::l2operation(std::string cmdType, std::string address) {
   l2parser->setAddress(address);
@@ -146,8 +126,7 @@ void Cache::put(std::string tag, int setid, std::string address) {
   if (hitInCache(tag, setid, 1)) {
     totalWrHit++;
   }
-  else {  //put into store buffer.
-
+  else {
     if (seenBefore2.count(temp)) {
       conflict_wr++;
     }
@@ -156,9 +135,10 @@ void Cache::put(std::string tag, int setid, std::string address) {
     }
     if (allocOnWrMiss == true) {
       //read from l2 cache
-      l2operation("0", address);
+      if (l2exist) {
+        l2operation("0", address);
+      }
       updCache(tag, setid, address);
-      seenBefore2.insert(temp);
     }
   }
 }
@@ -198,6 +178,30 @@ std::vector<int> Cache::getHitRate() {
   return res;
 }
 
+std::string D2B(const unsigned int val) {
+  std::string res;
+  for (int i = 16; i >= 0; i--) {
+    if (val & (1 << i))
+      res += "1";
+    else
+      res += "0";
+  }
+  return res;
+}
+
+void Cache::endOperation() {
+  for (size_t i = 0; i < dirty.size(); i++) {
+    for (size_t j = 0; j < dirty[0].size(); j++) {
+      if (l2exist && dirty[i][j] == true) {
+        std::string address = cache[i][j].second + D2B(i);
+        while (address.size() < 32)
+          address.append("1");
+        l2operation("1", address);
+      }
+      dirty[i][j] = false;
+    }
+  }
+}
 Cache::Cache(int h,
              int d,
              int associativity,
